@@ -1,7 +1,5 @@
 package com.crypto.model;
 
-import java.util.Date;
-
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -12,7 +10,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CryptoValue {
-    private Date timestamp;
+    private long timestamp;
     private String symbol;
     private double price;
 }

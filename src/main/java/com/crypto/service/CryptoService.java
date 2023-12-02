@@ -7,6 +7,7 @@ import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -25,7 +26,7 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class CryptoService {
 
-    Logger logger = LoggerFactory.getLogger(CryptoService.class);
+    private static final Logger logger = LoggerFactory.getLogger(CryptoService.class);
 
     private final CryptoValueDAO cryptoValueDAO;
     private final CryptoStatsCalculator cryptoStatsCalculator;
@@ -34,17 +35,28 @@ public class CryptoService {
 
         List<CryptoValue> cryptoValues = cryptoValueDAO.getCryptoValuesByName(name);
 
-        CryptoValue oldestCryptoValue = cryptoStatsCalculator.getOldest(cryptoValues);
-        CryptoValue newestCryptoValue = cryptoStatsCalculator.getNewest(cryptoValues);
-        CryptoValue minCryptoValue = cryptoStatsCalculator.getMin(cryptoValues);
-        CryptoValue maxCryptoValue = cryptoStatsCalculator.getMax(cryptoValues);
+        Optional<CryptoValue> oldestCryptoValue = cryptoStatsCalculator.getOldest(cryptoValues);
+        Optional<CryptoValue> newestCryptoValue = cryptoStatsCalculator.getNewest(cryptoValues);
+        Optional<CryptoValue> minCryptoValue = cryptoStatsCalculator.getMin(cryptoValues);
+        Optional<CryptoValue> maxCryptoValue = cryptoStatsCalculator.getMax(cryptoValues);
 
         CryptoStatsDTO stats = new CryptoStatsDTO();
 
-        stats.setOldestValue(oldestCryptoValue.getPrice());
-        stats.setNewestValue(newestCryptoValue.getPrice());
-        stats.setMinValue(minCryptoValue.getPrice());
-        stats.setMaxValue(maxCryptoValue.getPrice());
+        if (oldestCryptoValue.isPresent()) {
+            stats.setOldestValue(oldestCryptoValue.get().getPrice());
+        }
+
+        if (newestCryptoValue.isPresent()) {
+            stats.setNewestValue(newestCryptoValue.get().getPrice());
+        }
+
+        if (minCryptoValue.isPresent()) {
+            stats.setMinValue(minCryptoValue.get().getPrice());
+        }
+
+        if (maxCryptoValue.isPresent()) {
+            stats.setMaxValue(maxCryptoValue.get().getPrice());
+        }
 
         return stats;
     }
@@ -56,8 +68,20 @@ public class CryptoService {
             NormalizedRange normalizedRange = cryptoStatsCalculator.getNormalizedRange(name, cryptoValues);
             return new NormalizedRangeDTO(normalizedRange.getName(), normalizedRange.getRange());
         })
-        .sorted(Comparator.comparing(NormalizedRangeDTO::getRange).reversed())
-        .collect(Collectors.toList());
+                .sorted(Comparator.comparing(NormalizedRangeDTO::getRange).reversed())
+                .collect(Collectors.toList());
+    }
+
+    public Optional<NormalizedRangeDTO> getHighestNormalizedRange(String dateTimestamp) {
+        List<String> cryptoNames = getCryptoNamesFromResourceFiles();
+        return cryptoNames
+                .stream().map(name -> {
+                    List<CryptoValue> cryptoValues = cryptoValueDAO.getCryptoValuesByNameAndDateTimestamp(name,
+                            dateTimestamp);
+                    NormalizedRange normalizedRange = cryptoStatsCalculator.getNormalizedRange(name, cryptoValues);
+                    return new NormalizedRangeDTO(normalizedRange.getName(), normalizedRange.getRange());
+                })
+                .max(Comparator.comparing(NormalizedRangeDTO::getRange));
     }
 
     public List<String> getCryptoNamesFromResourceFiles() {

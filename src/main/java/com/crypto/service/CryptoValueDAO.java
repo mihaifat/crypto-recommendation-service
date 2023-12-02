@@ -3,9 +3,15 @@ package com.crypto.service;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
-import java.util.ArrayList;
-import java.util.Date;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
@@ -21,32 +27,65 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class CryptoValueDAO {
 
-    Logger logger = LoggerFactory.getLogger(CryptoValueDAO.class);
+    private static final Logger logger = LoggerFactory.getLogger(CryptoValueDAO.class);
+
+    private static final String[] HEADERS = { "timestamp", "symbol", "price" };
 
     public List<CryptoValue> getCryptoValuesByName(String name) {
-        String[] headers = { "timestamp", "symbol", "price" };
-        List<CryptoValue> cryptoValues = new ArrayList<>();
-        String fileName = "src/main/resources/prices/" + name + "_values.csv";
-
-        try (Reader in = new FileReader(fileName)) {
-            CSVFormat csvFormat = CSVFormat.DEFAULT.builder()
-                    .setHeader(headers)
-                    .setSkipHeaderRecord(true)
-                    .build();
-
-            Iterable<CSVRecord> records = csvFormat.parse(in);
-
-            for (CSVRecord csvRecord : records) {
-                Date timestamp = new Date(Long.valueOf(csvRecord.get("timestamp")));
-                String symbol = csvRecord.get("symbol");
-                double price = Double.parseDouble(csvRecord.get("price"));
-                cryptoValues.add(new CryptoValue(timestamp, symbol, price));
-            }
-        } catch (NumberFormatException | IOException e) {
+        try {
+            Stream<CSVRecord> records = getCSVRecords(name);
+            return records.map(this::csvRecordToCryptoValue).collect(Collectors.toList());
+        } catch (Exception e) {
             logger.error("Could not get crypto values by name: " + name + " due to following error", e);
         }
+        return Collections.emptyList();
+    }
 
-        return cryptoValues;
+    public List<CryptoValue> getCryptoValuesByNameAndDateTimestamp(String name, String dateTimestamp) {
+        try {
+            LocalDate date = LocalDate.parse(dateTimestamp);
+            
+            LocalDateTime localDateTimeStart = date.atStartOfDay();
+            Instant instantStart = localDateTimeStart.toInstant(ZoneOffset.UTC);
+            long unixTimestampStart = instantStart.getEpochSecond() * 1000L;
+
+            LocalDateTime localDateTimeEnd = date.atTime(23, 59, 59);
+            Instant instantEnd = localDateTimeEnd.toInstant(ZoneOffset.UTC);
+            long unixTimestampEnd = instantEnd.getEpochSecond() * 1000L;
+            
+            Stream<CSVRecord> records = getCSVRecords(name);
+            return records
+                    .map(this::csvRecordToCryptoValue)
+                    .filter(cryptoValue -> cryptoValue.getTimestamp() >= unixTimestampStart && cryptoValue.getTimestamp() <= unixTimestampEnd)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            logger.error("Could not get crypto values by name: " + name + " and dateTimestamp:" + dateTimestamp
+                    + " due to following error", e);
+        }
+        return Collections.emptyList();
+    }
+
+    private CryptoValue csvRecordToCryptoValue(CSVRecord csvRecord) {
+        long timestamp = Long.parseLong(csvRecord.get("timestamp"));
+        String symbol = csvRecord.get("symbol");
+        double price = Double.parseDouble(csvRecord.get("price"));
+        return new CryptoValue(timestamp, symbol, price);
+    }
+
+    private Stream<CSVRecord> getCSVRecords(String name) throws NumberFormatException, IOException {
+        String fileName = "src/main/resources/prices/" + name + "_values.csv";
+        try {
+            Reader in = new FileReader(fileName);
+            CSVFormat csvFormat = CSVFormat.DEFAULT.builder()
+                    .setHeader(HEADERS)
+                    .setSkipHeaderRecord(true)
+                    .build();
+            Iterable<CSVRecord> iterable = csvFormat.parse(in);
+            return StreamSupport.stream(iterable.spliterator(), false);
+        } catch (NumberFormatException | IOException e) {
+            logger.error("Could not get for fileName: " + fileName + " due to following error", e);
+            throw e;
+        }
     }
 
 }

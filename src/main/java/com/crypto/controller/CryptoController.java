@@ -1,6 +1,7 @@
 package com.crypto.controller;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,5 +32,11 @@ public class CryptoController {
     public ResponseEntity<List<NormalizedRangeDTO>> getNormalizedRanges() {
         List<NormalizedRangeDTO> normalizedRanges = cryptoService.getNormalizedRanges();
         return ResponseEntity.ok(normalizedRanges);
+    }
+
+    @GetMapping("/{dateTimestamp}/highest-normalized-range")
+    public ResponseEntity<NormalizedRangeDTO> getHighestNormalizedRange(@PathVariable String dateTimestamp) {
+        Optional<NormalizedRangeDTO> normalizedRanges = cryptoService.getHighestNormalizedRange(dateTimestamp);
+        return normalizedRanges.isPresent() ? ResponseEntity.ok(normalizedRanges.get()) : ResponseEntity.notFound().build();
     }
 }
