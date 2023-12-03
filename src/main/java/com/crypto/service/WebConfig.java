@@ -9,13 +9,14 @@ import lombok.AllArgsConstructor;
 @Configuration
 @AllArgsConstructor
 public class WebConfig implements WebMvcConfigurer {
-    
+
     private SupportedCryptoInterceptor supportedCryptoInterceptor;
+    private RateLimitInterceptor rateLimitInterceptor;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(supportedCryptoInterceptor)
-                .addPathPatterns("/crypto/*/stats");
+        registry.addInterceptor(supportedCryptoInterceptor).addPathPatterns("/crypto/*/stats");
+        registry.addInterceptor(rateLimitInterceptor).addPathPatterns("/**");
     }
 
 }
