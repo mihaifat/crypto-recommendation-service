@@ -10,9 +10,9 @@
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.crypto</groupId>
-	<artifactId>investment</artifactId>
+	<artifactId>crypto-recommendation-service</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>investment</name>
+	<name>Crypto Recommendation Service</name>
 	<description>Recommendation service for crypto investment</description>
 	<properties>
 		<java.version>21</java.version>

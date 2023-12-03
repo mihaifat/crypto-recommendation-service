@@ -13,6 +13,9 @@ import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.stereotype.Service;
 
 import com.crypto.dto.CryptoStatsDTO;
@@ -85,11 +88,12 @@ public class CryptoService {
     }
 
     public List<String> getCryptoNamesFromResourceFiles() {
-        try (Stream<Path> paths = Files.walk(Paths.get("src/main/resources/prices"))) {
-            return paths
-                    .filter(Files::isRegularFile)
-                    .map(path -> path.getFileName().toString().replace("_values.csv", ""))
-                    .collect(Collectors.toList());
+        try {
+            ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+            Resource[] resources = resolver.getResources("classpath:prices/*.csv");
+            return Stream.of(resources)
+                         .map(resource -> resource.getFilename().replace("_values.csv", ""))
+                         .collect(Collectors.toList());
         } catch (IOException e) {
             logger.error("Could get normalized ranges due to following error", e);
         }

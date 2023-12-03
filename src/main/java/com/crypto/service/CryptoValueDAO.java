@@ -2,6 +2,8 @@ package com.crypto.service;
 
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.Reader;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -17,6 +19,7 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
 import com.crypto.model.CryptoValue;
@@ -72,18 +75,19 @@ public class CryptoValueDAO {
         return new CryptoValue(timestamp, symbol, price);
     }
 
-    private Stream<CSVRecord> getCSVRecords(String name) throws NumberFormatException, IOException {
-        String fileName = "src/main/resources/prices/" + name + "_values.csv";
+    private Stream<CSVRecord> getCSVRecords(String name) throws IOException {
+        String resourcePath = "prices/" + name + "_values.csv";
         try {
-            Reader in = new FileReader(fileName);
+            InputStream is = new ClassPathResource(resourcePath).getInputStream();
+            Reader in = new InputStreamReader(is);
             CSVFormat csvFormat = CSVFormat.DEFAULT.builder()
                     .setHeader(HEADERS)
                     .setSkipHeaderRecord(true)
                     .build();
             Iterable<CSVRecord> iterable = csvFormat.parse(in);
             return StreamSupport.stream(iterable.spliterator(), false);
-        } catch (NumberFormatException | IOException e) {
-            logger.error("Could not get for fileName: " + fileName + " due to following error", e);
+        } catch (IOException e) {
+            logger.error("Could not get CSV records from resourcePath: " + resourcePath + " due to following error", e);
             throw e;
         }
     }
